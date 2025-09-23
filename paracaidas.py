@@ -9,8 +9,11 @@ class Paracaidas:
         self.root.configure(bg='#f0f0f0')
         self.root.resizable(False, False)
 
-        self.gravity = 9.8
-        self.planability = 2
+        # Parámetros físicos
+        self.g = 0.5         # gravedad "virtual"
+        self.r = 0.3         # resistencia / planeabilidad
+        self.vy = 0          # velocidad vertical
+        self.y = 50          # posición inicial en Y
         
         # Centrar la ventana
         self.centrar_ventana()
@@ -29,7 +32,6 @@ class Paracaidas:
 
     def crear_interfaz(self):
         # Titulo
-        
         titulo = tk.Label(
             self.root,
             text="Paracaidas",
@@ -39,7 +41,7 @@ class Paracaidas:
         titulo.pack(pady=20)
 
         main_frame = tk.Frame(self.root, bg="white")
-        main_frame.pack(padx=30, pady=10, fill='both', expand=True)
+        main_frame.pack(padx=30, fill='both', expand=True)
 
         # Hornet volando
         self.crear_canvas(main_frame, "planeando.png", "parado.png", "estampado.png")
@@ -64,13 +66,31 @@ class Paracaidas:
             height=400,
             bg='white'
         )
-        self.canvas.grid(row=1, column=0, sticky='w', pady=8)
+        self.canvas.grid(row=1, column=0, sticky='w')
         img = Image.open(sprite_planeando)
-        img = img.resize((100, 100))  # ancho=150px, alto=150px
+        self.sprite_height = 100
+        img = img.resize((100, self.sprite_height))  # ancho=150px, alto=150px
         self.photo = ImageTk.PhotoImage(img)
 
-        self.sprite = self.canvas.create_image(10, 10, image=self.photo, anchor='nw')
-        #canvas.create_oval(100, 10, 180, 80, width=2, fill='blue')
+        self.sprite = self.canvas.create_image(250, 10, image=self.photo, anchor='nw')
+        self.ground_y_coord = 350
+        self.floor = self.canvas.create_line(0, self.ground_y_coord, 590, self.ground_y_coord, width=5, fill='red')
+        self.update()
+
+    def update(self):
+        # Actualizar velocidad y posición
+        self.vy += self.g - self.r   # velocidad con gravedad y resistencia
+        self.y += self.vy
+
+        # Mover sprite
+        self.canvas.coords(self.sprite, 295, self.y)
+        print(self.canvas.coords(self.sprite))
+
+        # Detener en el suelo
+        if self.y + self.sprite_height < self.ground_y_coord:
+            self.root.after(50, self.update)  # sigue cayendo
+        else:
+            print("¡Aterrizó!")
 
     def move(self):
         self.canvas.move(self.sprite, 0, 3)
