@@ -47,17 +47,29 @@ class Paracaidas:
         self.crear_canvas(main_frame, "planeando.png", "parado.png", "estampado.png")
 
         # datos
-
-
-        # boton de iniciar / reiniciar 
-        move = tk.Button(
+        self.y_label = tk.Label(
             main_frame,
-            text='Mover abajo',
-            command=self.move,
-            padx=100,
-            pady=20
+            text=f"y {self.y}",
+            bg='#f0f0f0', 
+            fg='#2c3e50'
         )
-        move.grid(row=2, column=0, pady=10)
+        self.y_label.grid(row=2, column=0, pady=5)
+        
+        self.r_label = tk.Label(
+            main_frame,
+            text=f"r {self.r}",
+            bg='#f0f0f0', 
+            fg='#2c3e50'
+        )
+        self.r_label.grid(row=3, column=0, pady=5)
+        
+        # boton de iniciar / reiniciar 
+        self.start_button = tk.Button(
+            main_frame,
+            text='Iniciar',
+            command=self.update,
+        )
+        self.start_button.grid(row=2, column=1)
     
     def crear_canvas(self, parent, sprite_planeando, sprint_parado, sprite_estampado):
         self.canvas = tk.Canvas(
@@ -66,16 +78,17 @@ class Paracaidas:
             height=400,
             bg='white'
         )
-        self.canvas.grid(row=1, column=0, sticky='w')
+        self.canvas.grid(row=1, column=0, columnspan=2)
+
         img = Image.open(sprite_planeando)
         self.sprite_height = 100
         img = img.resize((100, self.sprite_height))  # ancho=150px, alto=150px
         self.photo = ImageTk.PhotoImage(img)
+        self.sprite = self.canvas.create_image(230, 10, image=self.photo, anchor='nw')
 
-        self.sprite = self.canvas.create_image(250, 10, image=self.photo, anchor='nw')
         self.ground_y_coord = 350
-        self.floor = self.canvas.create_line(0, self.ground_y_coord, 590, self.ground_y_coord, width=5, fill='red')
-        self.update()
+        self.ground = self.canvas.create_line(0, self.ground_y_coord, 590, self.ground_y_coord, width=5, fill='green')
+        self.canvas.create_rectangle(0, self.ground_y_coord, 590, 600, fill='brown', outline='green')
 
     def update(self):
         # Actualizar velocidad y posición
@@ -83,17 +96,19 @@ class Paracaidas:
         self.y += self.vy
 
         # Mover sprite
-        self.canvas.coords(self.sprite, 295, self.y)
+        self.canvas.coords(self.sprite, 230, self.y)
         print(self.canvas.coords(self.sprite))
-
+        self.update_labels()
+        
         # Detener en el suelo
         if self.y + self.sprite_height < self.ground_y_coord:
             self.root.after(50, self.update)  # sigue cayendo
         else:
             print("¡Aterrizó!")
 
-    def move(self):
-        self.canvas.move(self.sprite, 0, 3)
+    def update_labels(self):
+        self.y_label.config(text=f"y: {self.y}")
+        self.r_label.config(text=f"r: {self.r}")
 
 
 root = tk.Tk()
