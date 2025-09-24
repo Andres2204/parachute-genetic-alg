@@ -1,5 +1,6 @@
 import math
 from types import SimpleNamespace 
+import random
 
 
 # coincideraciones 
@@ -8,6 +9,7 @@ from types import SimpleNamespace
 # chromosome = [tiempo, parachute_area, coeficiente_arrastre]
 # fitness 
 #
+
 
 class AlgGeneticoParacaidas:
     def __init__(self, initial_altitude, safe_landing_speed, time_limit, population_size):
@@ -27,19 +29,59 @@ class AlgGeneticoParacaidas:
         self.generate_population()
 
     def generate_population(self):
-        pass
+       
+        self.chromosomes = []
+        for _ in range(self.population_size):         
+            random_area = random.uniform(10, 40)
+            random_coe = random.uniform(1, 2.5)
+            chromosome = create_chromosome(random_area, random_coe)
+            chromosome.fitness = self.fitness(chromosome) # Calcula el fitness inicial
+            self.chromosomes.append(chromosome)
     
     # selection 
-    def select_chromosomes(self, population):
-        c1, c2 = 1,2 
-        return c1, c2
+    def select_chromosomes(self):
+
+        def _tournament(k=3):
+            competitors = random.sample(self.chromosomes, k)
+            winner = max(competitors, key=lambda c: c.fitness)
+            return winner
+
+        parent1 = _tournament()
+        parent2 = _tournament()
+        
+        while parent1 is parent2:
+            parent2 = _tournament()
+            
+        return parent1, parent2
 
     # mixing and mutation 
     def mixing(self, c1, c2):
-        pass
+
+        child_area = (c1.area + c2.area) / 2.0
+        child_coe = (c1.coe + c2.coe) / 2.0
+        
+        # El nuevo cromosoma ya se crea con su fitness evaluado.
+        return self._create_chromosome(child_area, child_coe)
 
     def mutate(self, chromosome):
-        pass
+
+        mutated = False
+        if random.random() < self.mutation_rate:
+            change_factor = 1 + random.uniform(-self.mutation_strength, self.mutation_strength)
+            chromosome.area *= change_factor
+            chromosome.area = max(10, min(40, chromosome.area))
+            mutated = True
+
+        if random.random() < self.mutation_rate:
+            change_factor = 1 + random.uniform(-self.mutation_strength, self.mutation_strength)
+            chromosome.coe *= change_factor
+            chromosome.coe = max(1, min(2.5, chromosome.coe))
+            mutated = True
+
+        if mutated:
+            chromosome.fitness = self.fitness(chromosome)
+            
+        return chromosome
 
     # fitness 
     def fitness(self, chromosome):
@@ -84,10 +126,11 @@ class AlgGeneticoParacaidas:
         
 
 def create_chromosome(parachute_area, coeficiente_arrastre):
+    
     return SimpleNamespace(
-         area=parachute_area,
-         coe=coeficiente_arrastre,
-         fitness=0
+        area=parachute_area,
+        coe=coeficiente_arrastre,
+        fitness=0
     )
 
 obj = AlgGeneticoParacaidas(initial_altitude=240, safe_landing_speed=5.5, time_limit=60, population_size=5)
