@@ -30,7 +30,7 @@ class AlgGeneticoParacaidas:
         pass
     
     # selection 
-    def select_chromosomes(self, population):
+    def select_chromosomes(self):
         c1, c2 = 1,2 
         return c1, c2
 
@@ -76,11 +76,62 @@ class AlgGeneticoParacaidas:
         return abs(speed), time  # Abs para seguridad
 
     def get_next_gen(self):
-        # general program flow
 
-        best_chromosome = 1
+        nueva_poblacion = []
+
+        # --- ELITISMO ---
+        elite_chromosomes = sorted(self.chromosomes, key=lambda x: x.fitness, reverse=True)[:2]
+        nueva_poblacion.extend(elite_chromosomes)
+
+        # --- REPRODUCCIÓN ---
+        while len(nueva_poblacion) < len(self.chromosomes):
+            # Seleccionar padres
+            c1, c2 = self.select_chromosomes()
+
+            # Cruzarlos
+            child = self.mixing(c1, c2)
+
+            # Mutar hijo
+            self.mutate(child)
+
+            # Evaluar fitness
+            child.fitness = self.fitness(child)
+
+            # Agregar a nueva población
+            nueva_poblacion.append(child)
+
+        # Actualizar la población
+        self.chromosomes = nueva_poblacion
+
+        # Obtener mejor cromosoma de esta generación
+        best_chromosome = max(self.chromosomes, key=lambda x: x.fitness)
+
         self.generation += 1
         return self.generation, best_chromosome
+        """
+        # selecionar mansitos
+        c1, c2 = self.select_chromosomes()
+
+        # cruzarlos
+        child = self.mixing(c1, c2)
+
+        # mutar el hijo
+        mutate(child)
+
+        # comparar hijo
+        child.fitness = self.fitness(child);
+
+        # elitismo
+        elite_chromosomes = sorted(self.chromosomes, key=lambda x: x.fitness, reverse=True)[:2]
+        
+        # nueva poblacion
+        
+        # mandar mejor cromosoma 
+
+        best_chromosome = ...
+        self.generation += 1
+        return self.generation, best_chromosome
+        """
         
 
 def create_chromosome(parachute_area, coeficiente_arrastre):
