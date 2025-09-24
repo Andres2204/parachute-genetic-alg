@@ -80,7 +80,7 @@ class Paracaidas:
         self.canvas.grid(row=1, column=0, columnspan=2)
 
         img = Image.open(sprite_planeando)
-        self.sprite_height = 150
+        self.sprite_height = 100
         img = img.resize((100, self.sprite_height))  # ancho=150px, alto=150px
         self.photo = ImageTk.PhotoImage(img)
         self.sprite = self.canvas.create_image(230, self.y, image=self.photo, anchor='nw')
