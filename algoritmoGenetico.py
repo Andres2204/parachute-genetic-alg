@@ -21,22 +21,21 @@ class AlgGeneticoParacaidas:
         self.generation = 0;
 
     def simulate_fall(self):
-        altitud = self.initial_altitude
-        velocidad = self.initial_speed
+        height = self.initial_altitude
+        speed = self.initial_speed
         while altitud > 0:
             area_actual = self.parachute_area
             fuerza_gravedad = self.weight * self.g
-            magnitud_arrastre = 0.5 * self.air_d * (velocidad**2) * self.coeficiente_arrastre * area_actual 
-            fuerza_neta = fuerza_gravedad - math.copysign(1.0, velocidad) * magnitud_arrastre
+            magnitud_arrastre = 0.5 * self.air_d * (speed**2) * self.coeficiente_arrastre * area_actual 
+            fuerza_neta = fuerza_gravedad - math.copysign(1.0, speed) * magnitud_arrastre
             aceleracion = fuerza_neta / self.weight
-            velocidad += aceleracion * self.dt
-            altitud -= velocidad * self.dt
-            print(altitud)
+            speed += aceleracion * self.dt
+            height -= speed * self.dt
         
         # Clamp para evitar overshoot
-        if altitud < 0:
-            altitud = 0
-        return abs(velocidad)  # Abs para seguridad
+        if height < 0:
+            height = 0
+        return abs(speed)  # Abs para seguridad
 
         
 

@@ -92,9 +92,13 @@ class Paracaidas:
     def start_simulation(self):
         self.speed = self.initial_speed
         self.canvas.coords(self.sprite, 230, 10)
+        self.simulation = True
         self.simulation_step()
 
     def simulation_step(self):
+        if not self.simulation:
+            # get new gen
+
         # Actualizar velocidad y posición
         fuerza_gravedad = self.weight * self.g
         magnitud_arrastre = 0.5 * self.air_d * (self.speed*2) * self.coeficiente_arrastre * self.parachute_area 
@@ -107,10 +111,11 @@ class Paracaidas:
 
         if self.y < self.ground_y_coord - self.sprite_height:
             self.root.after(50, self.simulation_step)
+        else:
+            self.simulation = False
 
     def update_labels(self):
         self.y_label.config(text=f"y: {self.y}")
-
 
 root = tk.Tk()
 app = Paracaidas(root)
