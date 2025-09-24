@@ -67,7 +67,7 @@ class Paracaidas:
         self.start_button = tk.Button(
             main_frame,
             text='Iniciar',
-            command=self.update,
+            command=self.update, # start main loop for update generations
         )
         self.start_button.grid(row=2, column=1)
     
@@ -110,6 +110,8 @@ class Paracaidas:
         self.y_label.config(text=f"y: {self.y}")
         self.r_label.config(text=f"r: {self.r}")
 
+    def start_generations(self):
+        pass
 
 root = tk.Tk()
 app = Paracaidas(root)
