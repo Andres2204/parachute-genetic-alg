@@ -25,6 +25,8 @@ class AlgGeneticoParacaidas:
         self.dt = 0.1
         self.safe_landing_speed = safe_landing_speed # Metros por segundo m/s
         self.time_limit = time_limit
+        self.mutation_rate = 0.1
+        self.mutation_strength = 0.2
 
         self.generate_population()
 
@@ -61,7 +63,7 @@ class AlgGeneticoParacaidas:
         child_coe = (c1.coe + c2.coe) / 2.0
         
         # El nuevo cromosoma ya se crea con su fitness evaluado.
-        return self._create_chromosome(child_area, child_coe)
+        return create_chromosome(child_area, child_coe)
 
     def mutate(self, chromosome):
 
@@ -118,66 +120,34 @@ class AlgGeneticoParacaidas:
         return abs(speed), time  # Abs para seguridad
 
     def get_next_gen(self):
-
-        nueva_poblacion = []
-
-        # --- ELITISMO ---
-        elite_chromosomes = sorted(self.chromosomes, key=lambda x: x.fitness, reverse=True)[:2]
-        nueva_poblacion.extend(elite_chromosomes)
-
-        # --- REPRODUCCIÓN ---
-        while len(nueva_poblacion) < len(self.chromosomes):
-            # Seleccionar padres
-            c1, c2 = self.select_chromosomes()
-
-            # Cruzarlos
-            child = self.mixing(c1, c2)
-
-            # Mutar hijo
-            self.mutate(child)
-
-            # Evaluar fitness
-            child.fitness = self.fitness(child)
-
-            # Agregar a nueva población
-            nueva_poblacion.append(child)
-
-        # Actualizar la población
-        self.chromosomes = nueva_poblacion
-
-        # Obtener mejor cromosoma de esta generación
-        best_chromosome = max(self.chromosomes, key=lambda x: x.fitness)
-
-        self.generation += 1
-        return self.generation, best_chromosome
-        """
-        # selecionar mansitos
+        # normal flow
         c1, c2 = self.select_chromosomes()
-
-        # cruzarlos
         child = self.mixing(c1, c2)
-
-        # mutar el hijo
-        mutate(child)
-
-        # comparar hijo
-        child.fitness = self.fitness(child);
-
-        # elitismo
+        child = self.mutate(child)
+        child.fitness = self.fitness(child)
+    
+        # elite selection (best of generation)
         elite_chromosomes = sorted(self.chromosomes, key=lambda x: x.fitness, reverse=True)[:2]
-        
-        # nueva poblacion
-        
-        # mandar mejor cromosoma 
-
-        best_chromosome = ...
+        new_population = elite_chromosomes.copy()
+    
+        worst_chromosome = min(self.chromosomes, key=lambda x: x.fitness)
+        if child.fitness > worst_chromosome.fitness:
+            new_population.append(child)
+        else:
+            new_population.append(worst_chromosome)
+    
+        chromosomes_left = [c for c in self.chromosomes if c not in elite_chromosomes and c != worst_chromosome]
+        new_population.extend(chromosomes_left)
+    
+        new_population = new_population[:len(self.chromosomes)]
+    
+        self.chromosomes = new_population
+        best_chromosome = max(self.chromosomes, key=lambda x: x.fitness)
+    
         self.generation += 1
         return self.generation, best_chromosome
-        """
-        
 
 def create_chromosome(parachute_area, coeficiente_arrastre):
-    
     return SimpleNamespace(
         area=parachute_area,
         coe=coeficiente_arrastre,
@@ -185,11 +155,13 @@ def create_chromosome(parachute_area, coeficiente_arrastre):
     )
 
 obj = AlgGeneticoParacaidas(initial_altitude=240, safe_landing_speed=5.5, time_limit=60, population_size=5)
-velocidad_final, tiempo_total = obj.simulate_fall(20, 2)  # área = 10 m²
-fitness = obj.fitness(create_chromosome(20, 2))
-print(f"Velocidad de impacto: {velocidad_final:.2f} m/s")
-print(f"Tiempo de caída: {tiempo_total:.2f} s")
-print(f"Fitness: {fitness:.2f}")
-
+for _ in range(0, 1000):
+    gen, chromosome = obj.get_next_gen();
+    speed, time = obj.simulate_fall(chromosome.area, chromosome.coe)
+    print(chromosome, gen)
+    print(f"Velocidad de impacto: {speed:.2f} m/s")
+    print(f"Tiempo de caída: {time:.2f} s")
+    print(f"Fitness: {chromosome.fitness:.2f}", end='\n\n')
+    
 
 
