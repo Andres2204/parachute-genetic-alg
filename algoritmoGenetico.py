@@ -2,15 +2,6 @@ import math
 from types import SimpleNamespace 
 import random
 
-
-# coincideraciones 
-# 1px = 1m
-#
-# chromosome = [tiempo, parachute_area, coeficiente_arrastre]
-# fitness 
-#
-
-
 class AlgGeneticoParacaidas:
     def __init__(self, initial_altitude, safe_landing_speed, time_limit, population_size):
         self.chromosomes = []
@@ -25,8 +16,15 @@ class AlgGeneticoParacaidas:
         self.dt = 0.1
         self.safe_landing_speed = safe_landing_speed # Metros por segundo m/s
         self.time_limit = time_limit
-        self.mutation_rate = 0.3
-        self.mutation_strength = 0.5
+        self.mutation_rate = 1
+        self.mutation_strength = 0.9
+
+        self.min_area = 15
+        self.max_area = 35
+        
+        self.min_coe = 1.0
+        self.max_coe = 2.5
+        
 
         self.generate_population()
 
@@ -34,8 +32,8 @@ class AlgGeneticoParacaidas:
        
         self.chromosomes = []
         for _ in range(self.population_size):         
-            random_area = random.uniform(10, 40)
-            random_coe = random.uniform(1, 2.5)
+            random_area = random.uniform(self.min_area, self.max_area-15)
+            random_coe = random.uniform(self.min_coe, self.max_coe-1)
             chromosome = create_chromosome(random_area, random_coe)
             chromosome.fitness = self.fitness(chromosome) # Calcula el fitness inicial
             self.chromosomes.append(chromosome)
@@ -92,53 +90,49 @@ class AlgGeneticoParacaidas:
         return create_chromosome(child_area, child_coe)
 
     def mutate(self, chromosome):
-
         mutated = False
-        print("----------Mutating chromosome:", chromosome)
-        # ESTRATEGIA 1: Mutación Gaussiana (más suave y controlada)
+        #print("---Mutating chromosome:", chromosome)
+        # ESTRATEGIA 1: Mutación Gaussiana
         if random.random() < self.mutation_rate:
-            # Mutación gaussiana para el área
-            gaussian_change = random.gauss(0, self.mutation_strength * chromosome.area)
+            gaussian_change = random.gauss(0, 0.1 * chromosome.area)  # Menor desviación
             chromosome.area += gaussian_change
-            chromosome.area = max(10, min(40, chromosome.area))
+            chromosome.area = max(self.min_area, min(self.max_area, chromosome.area))
             mutated = True
-
+    
         if random.random() < self.mutation_rate:
-            # Mutación gaussiana para el coeficiente
-            gaussian_change = random.gauss(0, self.mutation_strength * chromosome.coe)
+            gaussian_change = random.gauss(0, 0.1 * chromosome.coe)  # Menor desviación
             chromosome.coe += gaussian_change
-            chromosome.coe = max(1, min(2.5, chromosome.coe))
+            chromosome.coe = max(self.min_coe, min(self.max_coe, chromosome.coe))  # Límites correctos
             mutated = True
-
-        # ESTRATEGIA 2: Mutación forzada ocasional (evita estancamiento)
-        if not mutated and random.random() < 0.05:  # 5% de mutación forzada
+    
+        # ESTRATEGIA 2: Mutación forzada ocasional
+        if random.random() < 0.05:  # Independiente de mutated
             if random.random() < 0.5:
-                # Mutación grande en área
                 chromosome.area *= random.uniform(0.7, 1.3)
-                chromosome.area = max(10, min(40, chromosome.area))
+                chromosome.area = max(self.min_area, min(self.max_area, chromosome.area))
             else:
-                # Mutación grande en coeficiente
                 chromosome.coe *= random.uniform(0.7, 1.3)
-                chromosome.coe = max(1, min(2.5, chromosome.coe))
+                chromosome.coe = max(self.min_coe, min(self.max_coe, chromosome.coe))
             mutated = True
-        print("------------Resulting chromosome:", chromosome)
+        #print("---Resulting chromosome:", chromosome)
         return chromosome, mutated
-    # fitness 
-    def fitness(self, chromosome):
-        final_speed, total_time = self.simulate_fall(chromosome.area, chromosome.coe)
-
-        # Penalización velocidad
-        if final_speed <= self.safe_landing_speed:
-            score_vel = 1.0
+    
+    def fitness(self, chromosome, t_max=60.0):
+        final_speed, time = self.simulate_fall(chromosome.area, chromosome.coe)
+        score_vel = self.safe_landing_speed / final_speed  # Siempre, sin cap en 1.0 para recompensar v más bajas
+    
+        if time > self.time_limit:
+            target_time = 0.6 * t_max
+            sigma = 0.4 * t_max
         else:
-            score_vel = self.safe_landing_speed / final_speed
-        
-        score_time = max(0, 1 - (total_time / self.time_limit))
+            target_time = 0.8 * t_max
+            sigma = 0.2 * t_max
 
-        # Fitness combinado
-        fitness = score_vel * score_time
+        score_time = math.exp(-((time - target_time) ** 2) / (2 * sigma ** 2))
+    
+        fitness = 0.7 * score_vel + 0.3 * score_time
         return fitness
-
+        
     def simulate_fall(self, parachute_area, coeficiente_arrastre):
         height = self.initial_altitude
         speed = self.initial_speed
@@ -152,39 +146,26 @@ class AlgGeneticoParacaidas:
             height -= speed * self.dt
             time += self.dt
         
-        # Clamp para evitar overshoot
         if height < 0:
             height = 0
-        return abs(speed), time  # Abs para seguridad
+        return abs(speed), time
 
     def get_next_gen(self):
-            # Selección normal
-        c1, c2 = self.select_chromosomes()
-        child = self.mixing(c1, c2)
+        chromosomes = sorted(self.chromosomes, key=lambda x: x.fitness, reverse=True)
+        new_population = chromosomes[:2]
         
-        # Mutación mejorada
-        child, was_mutated = self.mutate(child)  # o mutate_adaptive
-        
-        # Solo calcular fitness si mutó o es nuevo
-        child.fitness = self.fitness(child)
-        
-        # Resto del código igual...
-        elite_chromosomes = sorted(self.chromosomes, key=lambda x: x.fitness, reverse=True)[:2]
-        new_population = elite_chromosomes.copy()
-        
-        worst_chromosome = min(self.chromosomes, key=lambda x: x.fitness)
-        if child.fitness > worst_chromosome.fitness:
+        for _ in range(3):
+            c1, c2 = self.select_chromosomes()
+            child = self.mixing(c1, c2)
+            child, _ = self.mutate(child)
+            child.fitness = self.fitness(child)
             new_population.append(child)
-        else:
-            new_population.append(worst_chromosome)
+            print("[gc] ", child)
         
-        chromosomes_left = [c for c in self.chromosomes if c not in elite_chromosomes and c != worst_chromosome]
-        new_population.extend(chromosomes_left)
-        new_population = new_population[:len(self.chromosomes)]
+        new_population.extend(chromosomes[2:self.population_size - len(new_population) + 2])
+        self.chromosomes = sorted(new_population[:self.population_size], key=lambda x: x.fitness, reverse=True)
         
-        self.chromosomes = new_population
-        best_chromosome = max(self.chromosomes, key=lambda x: x.fitness)
-        
+        best_chromosome = self.chromosomes[0]
         self.generation += 1
         return self.generation, best_chromosome
 
@@ -195,13 +176,11 @@ def create_chromosome(parachute_area, coeficiente_arrastre):
         fitness=0
     )
 
-obj = AlgGeneticoParacaidas(initial_altitude=240, safe_landing_speed=5.5, time_limit=60, population_size=5)
-for _ in range(0, 1000):
+obj = AlgGeneticoParacaidas(initial_altitude=240, safe_landing_speed=5.5, time_limit=60, population_size=50)
+for _ in range(0, 300):
     gen, chromosome = obj.get_next_gen();
     speed, time = obj.simulate_fall(chromosome.area, chromosome.coe)
-    print(chromosome, gen)
+    print("[Best] ", chromosome, gen)
     print(f"Velocidad de impacto: {speed:.2f} m/s")
     print(f"Tiempo de caída: {time:.2f} s")
     print(f"Fitness: {chromosome.fitness:.2f}", end='\n\n')
-    
-
