@@ -80,13 +80,15 @@ class AlgGeneticoParacaidas:
         
         return parent1, parent2
 
-    # mixing and mutation 
+    # mixing and mutation
     def mixing(self, c1, c2):
-
-        child_area = (c1.area + c2.area) / 2.0
-        child_coe = (c1.coe + c2.coe) / 2.0
-        
-        # El nuevo cromosoma ya se crea con su fitness evaluado.
+        # Elegir aleatoriamente el área de uno de los padres
+        if random.random() < 0.5:
+            child_area = c1.area
+            child_coe = c2.coe  # Usar el coeficiente del otro padre
+        else:
+            child_area = c2.area
+            child_coe = c1.coe  # Usar el coeficiente del otro padre
         return create_chromosome(child_area, child_coe)
 
     def mutate(self, chromosome):
