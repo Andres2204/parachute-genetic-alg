@@ -5,20 +5,38 @@ import math
 #
 
 class AlgGeneticoParacaidas:
-    def __init__(self, initial_altitude):
+    def __init__(self, initial_altitude, safe_landing_speed, population_size):
         self.chromosomes = []
+        self.generation = 0
+        self.population_size = population_size
 
         self.initial_altitude = initial_altitude
         self.g = 9.81
         self.weight = 80
-        self.parachute_area = 10  # Un paracaídas desafiante
+        self.parachute_area = 10
         self.coeficiente_arrastre = 1.0
         self.air_d = 1.225
         self.initial_speed = 0
         self.dt = 0.1
-        self.safe_landing_speed = 5.5 # Metros por segundo m/s
+        self.safe_landing_speed = safe_landing_speed # Metros por segundo m/s
 
-        self.generation = 0;
+        self.generate_population()
+
+    def generate_population(self):
+        pass
+    
+    # selection 
+
+    # mixing and mutation 
+    def mixing(self, c1, c2):
+        pass
+
+    def mutate(self, chromosome):
+        pass
+
+    # fitness 
+    def fitness(self, chromosome):
+        pass
 
     def simulate_fall(self):
         height = self.initial_altitude
@@ -37,8 +55,14 @@ class AlgGeneticoParacaidas:
             height = 0
         return abs(speed)  # Abs para seguridad
 
+    def get_next_gen(self):
+        # general program flow
+
+
+        self.generation += 1
+        return self.generation, best_chromosome
         
 
-obj = AlgGeneticoParacaidas(initial_altitude=20)
+obj = AlgGeneticoParacaidas(initial_altitude=20, safe_landing_speed=5.5)
 print(obj.simulate_fall())
 
