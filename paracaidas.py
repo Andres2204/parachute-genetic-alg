@@ -20,6 +20,8 @@ class Paracaidas:
         self.air_d = 1.225
         self.initial_speed = 0
         self.dt = 0.1
+        # Escala visual: cuántos píxeles representa 1 metro (para notar mejor los cambios de velocidad)
+        self.px_per_meter = 50
         self.safe_landing_speed = 5.5 # Metros por segundo m/s
         self.y = 10
         self.simulation = False
@@ -34,6 +36,7 @@ class Paracaidas:
         self.best_chromosome = None
         self.generations_to_run = 0
         self.is_evolving = False
+        self.on_simulation_complete = None
     
     def centrar_ventana(self):
         """Centra la ventana en la pantalla"""
@@ -221,9 +224,10 @@ class Paracaidas:
             self.sprite = self.canvas.create_rectangle(150, 10, 200, 60, fill="red")
             self.sprite_height = 50
 
-    def start_simulation(self):
+    def start_simulation(self, on_complete=None):
         if self.simulation: # No hacer nada si ya está corriendo
             return
+        self.on_simulation_complete = on_complete
         self.speed = self.initial_speed
         self.y = 10
         # Cargar el sprite de planeo y moverlo a la posición inicial
@@ -257,10 +261,10 @@ class Paracaidas:
         self.canvas.coords(self.sprite, 150, self.y)
 
     def handle_start(self):
-        """Ejecuta GA por N generaciones y luego anima caída con el mejor cromosoma."""
+        """Evoluciona y anima una caída por generación usando get_next_gen()."""
         if self.simulation or self.is_evolving:
             return
-
+        
         # Parámetros GA (pueden exponerse en UI si se desea)
         time_limit = 60
         population_size = 8
@@ -270,11 +274,44 @@ class Paracaidas:
             time_limit=time_limit,
             population_size=population_size
         )
-
+        
         self.generations_to_run = 60
         self.is_evolving = True
-        self.status_label.config(text="Estado: evolucionando...")
-        self.run_evolution_step()
+        self.status_label.config(text="Estado: evolucionando y animando por generación...")
+        self.animate_next_generation()
+
+    def animate_next_generation(self):
+        """Obtiene la siguiente generación, actualiza parámetros y anima caída.
+        Al tocar suelo, continúa con la siguiente hasta terminar."""
+        if not self.is_evolving or self.ga is None:
+            return
+        if self.generations_to_run <= 0:
+            # Terminar mostrando el mejor cromosoma final
+            best = max(self.ga.chromosomes, key=lambda c: c.fitness)
+            self.best_chromosome = best
+            self.parachute_area = best.area
+            self.coeficiente_arrastre = best.coe
+            self.fitness_label.config(text=f"Fitness: {best.fitness:.2f}")
+            self.status_label.config(text="Estado: terminado")
+            self.is_evolving = False
+            return
+
+        # Obtener siguiente generación con su mejor cromosoma
+        gen, best = self.ga.get_next_gen()
+        self.generation_label.config(text=f"Generación: {gen}")
+        self.fitness_label.config(text=f"Fitness: {best.fitness:.2f}")
+        self.parachute_area = best.area
+        self.coeficiente_arrastre = best.coe
+        self.update_labels()
+
+        # Preparar callback para encadenar la siguiente generación tras aterrizar
+        def _after_landing():
+            self.generations_to_run -= 1
+            # Breve pausa para apreciar el aterrizaje
+            self.root.after(300, self.animate_next_generation)
+
+        # Iniciar animación de la caída con los parámetros actuales
+        self.start_simulation(on_complete=_after_landing)
 
     def run_evolution_step(self):
         if not self.is_evolving or self.ga is None:
@@ -316,13 +353,15 @@ class Paracaidas:
         fuerza_neta = fuerza_gravedad - magnitud_arrastre
         aceleracion = fuerza_neta / self.weight
         self.speed += aceleracion * self.dt
-        self.y += self.speed * self.dt # La y aumenta hacia abajo
+        # Convertimos metros a píxeles para que la diferencia de velocidades sea visible
+        self.y += self.speed * self.dt * self.px_per_meter # La y aumenta hacia abajo
         
         self.canvas.coords(self.sprite, 150, self.y)
         self.update_labels()
 
         if self.y < self.ground_y_coord - self.sprite_height:
-            self.root.after(30, self.simulation_step) # 30 ms para una animación más fluida
+            delay_ms = int(max(10, min(60, 60 - self.speed * 5)))
+            self.root.after(delay_ms, self.simulation_step)
         else:
             self.simulation = False
             # ## MEJORA DE ATERRIZAJE AQUÍ ##
@@ -336,6 +375,12 @@ class Paracaidas:
             # Colocar el sprite justo en el suelo
             self.canvas.coords(self.sprite, 150, self.ground_y_coord - self.sprite_height)
             self.update_labels() # Actualizar una última vez con la velocidad final
+            # Disparar callback de finalización de simulación si existe
+            if self.on_simulation_complete is not None:
+                callback = self.on_simulation_complete
+                self.on_simulation_complete = None
+                # Ejecutar tras un pequeño delay para permitir render del sprite de aterrizaje
+                self.root.after(50, callback)
 
     # ## MÉTODO CORREGIDO ##
     def update_labels(self):

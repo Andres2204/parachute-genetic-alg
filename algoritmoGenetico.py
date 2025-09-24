@@ -178,11 +178,12 @@ def create_chromosome(parachute_area, coeficiente_arrastre):
         fitness=0
     )
 
-obj = AlgGeneticoParacaidas(initial_altitude=240, safe_landing_speed=5.5, time_limit=60, population_size=50)
-for _ in range(0, 300):
-    gen, chromosome = obj.get_next_gen();
-    speed, time = obj.simulate_fall(chromosome.area, chromosome.coe)
-    print("[Best] ", chromosome, gen)
-    print(f"Velocidad de impacto: {speed:.2f} m/s")
-    print(f"Tiempo de caída: {time:.2f} s")
-    print(f"Fitness: {chromosome.fitness:.2f}", end='\n\n')
+if __name__ == "__main__":
+    obj = AlgGeneticoParacaidas(initial_altitude=240, safe_landing_speed=5.5, time_limit=60, population_size=50)
+    for _ in range(0, 300):
+        gen, chromosome = obj.get_next_gen()
+        speed, time = obj.simulate_fall(chromosome.area, chromosome.coe)
+        print("[Best] ", chromosome, gen)
+        print(f"Velocidad de impacto: {speed:.2f} m/s")
+        print(f"Tiempo de caída: {time:.2f} s")
+        print(f"Fitness: {chromosome.fitness:.2f}", end='\n\n')
