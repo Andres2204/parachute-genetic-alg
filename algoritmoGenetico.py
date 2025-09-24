@@ -1,14 +1,16 @@
 import math
+from types import SimpleNamespace 
+
 
 # coincideraciones 
 # 1px = 1m
 #
 # chromosome = [tiempo, parachute_area, coeficiente_arrastre]
-#
+# fitness 
 #
 
 class AlgGeneticoParacaidas:
-    def __init__(self, initial_altitude, safe_landing_speed, population_size):
+    def __init__(self, initial_altitude, safe_landing_speed, time_limit, population_size):
         self.chromosomes = []
         self.generation = 0
         self.population_size = population_size
@@ -20,6 +22,7 @@ class AlgGeneticoParacaidas:
         self.initial_speed = 0
         self.dt = 0.1
         self.safe_landing_speed = safe_landing_speed # Metros por segundo m/s
+        self.time_limit = time_limit
 
         self.generate_population()
 
@@ -40,7 +43,19 @@ class AlgGeneticoParacaidas:
 
     # fitness 
     def fitness(self, chromosome):
-        pass
+        final_speed, total_time = self.simulate_fall(chromosome.area, chromosome.coe)
+
+        # Penalización velocidad
+        if final_speed <= self.safe_landing_speed:
+            score_vel = 1.0
+        else:
+            score_vel = self.safe_landing_speed / final_speed
+        
+        score_time = max(0, 1 - (total_time / self.time_limit))
+
+        # Fitness combinado
+        fitness = score_vel * score_time
+        return fitness
 
     def simulate_fall(self, parachute_area, coeficiente_arrastre):
         height = self.initial_altitude
@@ -68,9 +83,19 @@ class AlgGeneticoParacaidas:
         return self.generation, best_chromosome
         
 
-obj = AlgGeneticoParacaidas(initial_altitude=240, safe_landing_speed=5.5, population_size=5)
+def create_chromosome(parachute_area, coeficiente_arrastre):
+    return SimpleNamespace(
+         area=parachute_area,
+         coe=coeficiente_arrastre,
+         fitness=0
+    )
+
+obj = AlgGeneticoParacaidas(initial_altitude=240, safe_landing_speed=5.5, time_limit=60, population_size=5)
 velocidad_final, tiempo_total = obj.simulate_fall(20, 2)  # área = 10 m²
+fitness = obj.fitness(create_chromosome(20, 2))
 print(f"Velocidad de impacto: {velocidad_final:.2f} m/s")
 print(f"Tiempo de caída: {tiempo_total:.2f} s")
+print(f"Fitness: {fitness:.2f}")
+
 
 
