@@ -1,6 +1,7 @@
 import tkinter as tk
-import math
 from PIL import Image, ImageTk
+import random
+from algoritmoGenetico import AlgGeneticoParacaidas
 
 class Paracaidas:
     def __init__(self, root):
@@ -28,6 +29,11 @@ class Paracaidas:
         
         # Crear la interfaz
         self.crear_interfaz()
+        # Estado del algoritmo genético en UI
+        self.ga = None
+        self.best_chromosome = None
+        self.generations_to_run = 0
+        self.is_evolving = False
     
     def centrar_ventana(self):
         """Centra la ventana en la pantalla"""
@@ -66,8 +72,8 @@ class Paracaidas:
         
         self.setup_button = tk.Button(
             button_frame,
-            text='Reiniciar',
-            command=self.start_simulation, # Reiniciar es lo mismo que empezar de nuevo
+            text='Setup',
+            command=self.setup_random,
             bg='#3498db',
             fg='white',
             font=('Arial', 12),
@@ -77,8 +83,8 @@ class Paracaidas:
         
         self.start_button = tk.Button(
             button_frame,
-            text='Ejecutar',
-            command=self.start_simulation,
+            text='Start',
+            command=self.handle_start,
             bg='#27ae60',
             fg='white',
             font=('Arial', 12),
@@ -158,6 +164,16 @@ class Paracaidas:
             font=('Arial', 12, 'bold')
         )
         self.fitness_label.pack(pady=10, anchor='w', padx=10)
+        
+        # Etiqueta de estado
+        self.status_label = tk.Label(
+            right_frame,
+            text="Estado: listo",
+            bg='#ecf0f1',
+            fg='#7f8c8d',
+            font=('Arial', 10)
+        )
+        self.status_label.pack(pady=5, anchor='w', padx=10)
     
     def crear_canvas(self, parent, sprite_planeando, sprite_parado, sprite_estampado):
         self.canvas = tk.Canvas(
@@ -216,6 +232,78 @@ class Paracaidas:
         
         self.simulation = True
         self.simulation_step()
+
+    def setup_random(self):
+        """Inicializa valores aleatorios según los atributos y actualiza el panel."""
+        # Si hay evolución/animación en curso, no permitir cambios
+        if self.simulation or self.is_evolving:
+            return
+
+        # Rango razonable para atributos ajustables
+        self.parachute_area = random.uniform(10, 40)
+        self.coeficiente_arrastre = random.uniform(1.0, 2.5)
+        self.weight = random.uniform(60, 100)
+
+        # Reiniciar etiquetas y estado
+        self.speed = 0.0
+        self.y = 10
+        self.best_chromosome = None
+        self.fitness_label.config(text="Fitness: 0.00")
+        self.generation_label.config(text="Generación: 0")
+        self.status_label.config(text="Estado: setup aleatorio")
+        self.update_labels()
+        # Reset visual
+        self.load_sprite(self.sprite_planeando_path)
+        self.canvas.coords(self.sprite, 150, self.y)
+
+    def handle_start(self):
+        """Ejecuta GA por N generaciones y luego anima caída con el mejor cromosoma."""
+        if self.simulation or self.is_evolving:
+            return
+
+        # Parámetros GA (pueden exponerse en UI si se desea)
+        time_limit = 60
+        population_size = 8
+        self.ga = AlgGeneticoParacaidas(
+            initial_altitude=self.initial_altitude,
+            safe_landing_speed=self.safe_landing_speed,
+            time_limit=time_limit,
+            population_size=population_size
+        )
+
+        self.generations_to_run = 60
+        self.is_evolving = True
+        self.status_label.config(text="Estado: evolucionando...")
+        self.run_evolution_step()
+
+    def run_evolution_step(self):
+        if not self.is_evolving or self.ga is None:
+            return
+        if self.generations_to_run <= 0:
+            # terminar evolución, usar mejor cromosoma actual
+            best = max(self.ga.chromosomes, key=lambda c: c.fitness)
+            self.best_chromosome = best
+            self.parachute_area = best.area
+            self.coeficiente_arrastre = best.coe
+            self.fitness_label.config(text=f"Fitness: {best.fitness:.2f}")
+            self.status_label.config(text="Estado: animando caída")
+            self.is_evolving = False
+            # iniciar animación con parámetros optimizados
+            self.start_simulation()
+            return
+
+        # Una generación
+        gen, best = self.ga.get_next_gen()
+        self.generation_label.config(text=f"Generación: {gen}")
+        self.fitness_label.config(text=f"Fitness: {best.fitness:.2f}")
+        # Mostrar valores del mejor en panel
+        self.parachute_area = best.area
+        self.coeficiente_arrastre = best.coe
+        self.update_labels()
+
+        self.generations_to_run -= 1
+        # Programar siguiente paso sin bloquear UI
+        self.root.after(30, self.run_evolution_step)
 
     def simulation_step(self):
         if not self.simulation:
